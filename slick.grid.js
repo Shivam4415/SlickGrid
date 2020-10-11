@@ -574,6 +574,8 @@ if (typeof Slick === "undefined") {
         $headerScroller
             //.on("scroll", handleHeaderScroll)
             .on("contextmenu", handleHeaderContextMenu)
+	    .on("touchstart", simulateTouchStart)
+	    .on("touchend", clearTouchStart)
             .on("click", handleHeaderClick)
             .on("mouseenter", ".slick-header-column", handleHeaderMouseEnter)
             .on("mouseleave", ".slick-header-column", handleHeaderMouseLeave);
@@ -583,7 +585,9 @@ if (typeof Slick === "undefined") {
         if (options.createFooterRow) {
           $footerRow
             .on("contextmenu", handleFooterContextMenu)
-            .on("click", handleFooterClick);
+            .on("click", handleFooterClick)
+            .on("touchstart", simulateTouchStart)
+            .on("touchend", clearTouchStart);
 
           $footerRowScroller
               .on("scroll", handleFooterRowScroll);
@@ -601,6 +605,8 @@ if (typeof Slick === "undefined") {
             .on("click", handleClick)
             .on("dblclick", handleDblClick)
             .on("contextmenu", handleContextMenu)
+	    .on("touchstart", handleTouchStart)
+	    .on("touchend", handleTouchEnd)
             .on("draginit", handleDragInit)
             .on("dragstart", {distance: 3}, handleDragStart)
             .on("drag", handleDrag)
@@ -4535,6 +4541,57 @@ if (typeof Slick === "undefined") {
         }
       }
     }
+	  
+
+      /* Simulate and trigger mouse events which are not handled by browsers. 
+     * Pass your event as type and rest this fn will take care of.
+     * Ex: IPAD/IOS Safari : ContextMenu.
+    */
+    function handleTouchEnd(e) {
+	    var $cell = $(e.target).closest(".slick-cell", $canvas);
+	    if ($cell.length === 0) {
+		return;
+	    }
+	    clearTouchStart(e);
+    }
+
+
+	function simulateEvent(type, e) {
+	    var simulatedEvent = document.createEvent('MouseEvents');
+
+	    simulatedEvent.initMouseEvent(
+		    type, true, true, window, 1,
+		    e.touches[0].screenX, e.touches[0].screenY,
+		    e.touches[0].clientX, e.touches[0].clientX,
+		    false, false, false, false, 0, null);
+
+	    e.target.dispatchEvent(simulatedEvent);
+	}
+
+	function handleTouchStart(e) {
+	    var $cell = $(e.target).closest(".slick-cell", $canvas);
+	    if ($cell.length === 0) {
+		return;
+	    }
+	    simulateTouchStart(e);
+	}
+
+	// simulate long hold but setting a timeout
+	function simulateTouchStart(e) {
+	    if (!touchTimer) {
+		touchTimer = setTimeout(function () {
+		simulateEvent("contextmenu", e);
+	    }, 800);
+	    }
+	}
+
+	//Clear timeout will not simulate context-menu events. 
+	function clearTouchStart(e) {
+	    if (touchTimer) {
+		clearTimeout(touchTimer);
+		touchTimer = null;
+	    }
+	}  
 
     function handleClick(e) {
       if (!currentEditor) {
@@ -5844,6 +5901,8 @@ if (typeof Slick === "undefined") {
       "onAutosizeColumns": new Slick.Event(),
       "onRendered": new Slick.Event(),
       "onSetOptions": new Slick.Event(),
+      "onTouchStart": new Slick.Event(),
+      "onTouchEnd": new Slick.Event(),
 
       // Methods
       "registerPlugin": registerPlugin,
